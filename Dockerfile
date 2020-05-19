@@ -6,6 +6,9 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -tags netgo -ldflags '-w' 
 
 FROM alpine:3.11
 
+WORKDIR /app
 COPY --from=builder /build/httelper /usr/bin
+COPY --from=builder /build/views/ /app/views/
+
 ENV GIN_MODE=release
 ENTRYPOINT [ "/usr/bin/httelper" ]
