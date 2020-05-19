@@ -21,20 +21,23 @@ func main() {
 	r.GET("/sequence/:current", func(c *gin.Context) {
 		current, _ := strconv.Atoi(c.Param("current"))
 		delay := 0
+		delayMin := 0
+		delayMax := 0
+		clockDelay := c.Query("clockDelay")
 
-		if c.Query("clock") != "" {
+		if clockDelay != "" {
 			hour, min, sec := time.Now().Clock()
 
-			var clockDelay float64
-			switch c.Query("clock") {
+			var delayF float64
+			switch clockDelay {
 			case "seconds":
-				clockDelay = float64(sec) / float64(60) * 5 * 1000
+				delayF = float64(sec) / float64(60) * 5 * 1000
 			case "minutes":
-				clockDelay = float64(min) / float64(60) * 5 * 1000
+				delayF = float64(min) / float64(60) * 5 * 1000
 			case "hours":
-				clockDelay = float64(hour) / float64(60) * 5 * 1000
+				delayF = float64(hour) / float64(60) * 5 * 1000
 			}
-			delay = int(clockDelay)
+			delay = int(delayF)
 			time.Sleep(time.Millisecond * time.Duration(delay))
 		} else {
 			delayMin, _ := strconv.Atoi(c.DefaultQuery("delayMin", "0"))
@@ -49,9 +52,12 @@ func main() {
 		}
 
 		c.HTML(http.StatusOK, "sequence.tmpl", gin.H{
-			"current": current,
-			"next":    current + 1,
-			"delay":   delay,
+			"current":    current,
+			"next":       current + 1,
+			"delay":      delay,
+			"delayMin":   delayMin,
+			"delayMax":   delayMax,
+			"clockDelay": clockDelay,
 		})
 	})
 
