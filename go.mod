@@ -1,12 +1,10 @@
-module slowser
+module httelper
 
 go 1.14
 
 require (
-	github.com/cespare/reflex v0.2.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
-	github.com/gin-gonic/gin v1.6.3 // indirect
-	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
-	github.com/kr/pty v1.1.8 // indirect
-	github.com/ogier/pflag v0.0.1 // indirect
+	github.com/gin-gonic/gin v1.6.3
+	github.com/go-redis/redis/v8 v8.0.0-beta.2
+	github.com/peterhellberg/cloudmailin v0.0.0-20190124105229-e7078a8c8557
 )

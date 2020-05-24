@@ -15,6 +15,5 @@ jobs:
           repository: mattipaksula/httelper
           tag_with_ref: true
           tag_with_sha: true
-          cache_froms: mattipaksula/httelper:latest
         env:
           DOCKER_BUILDKIT: 1
