@@ -53,6 +53,12 @@ func main() {
 		c.HTML(http.StatusOK, "index.tmpl", nil)
 	})
 
+	r.GET("/mail/clear", func(c *gin.Context) {
+		redis.Del(c, "httelper:mail:v1:inbox")
+
+		c.String(http.StatusOK, "cleared")
+	})
+
 	r.POST("/mail/cloudmailin", func(c *gin.Context) {
 		var buf bytes.Buffer
 		tee := io.TeeReader(c.Request.Body, &buf)
@@ -75,10 +81,19 @@ func main() {
 		}
 
 		fmt.Println("body", string(bodyBytes))
-		redis.LPush(c, "httelper:mail:v1:inbox", string(bodyBytes))
+		redis.RPush(c, "httelper:mail:v1:inbox", string(bodyBytes))
 	})
 	r.GET("/mail/next", func(c *gin.Context) {
-		message, _ := redis.RPop(c, "httelper:mail:v1:inbox").Result()
+		mode := c.DefaultQuery("mode", "peek")
+		message := ""
+		switch mode {
+		case "peek":
+			message, _ = redis.LIndex(c, "httelper:mail:v1:inbox", 0).Result()
+		case "pop":
+			message, _ = redis.LPop(c, "httelper:mail:v1:inbox").Result()
+		default:
+			panic("unknown mode " + mode)
+		}
 
 		if message == "" {
 			c.HTML(http.StatusNotFound, "mail_next.tmpl", gin.H{
