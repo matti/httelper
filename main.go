@@ -27,7 +27,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	redis := redis.NewClient(redisOpts)
+	redis := redis.NewClient(&redis.Options{
+		Addr:     redisOpts.Addr,
+		Password: redisOpts.Password,
+	})
 
 	port, ok := os.LookupEnv("PORT")
 	if !ok {

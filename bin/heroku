@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+APP=$1
+
+export IMAGE="registry.heroku.com/$APP/web"
+docker-compose -f docker-compose.release.yml build
+docker-compose -f docker-compose.release.yml push
+
+heroku container:release -a $APP web
+heroku logs --tail -a $APP
