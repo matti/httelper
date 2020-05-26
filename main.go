@@ -18,7 +18,7 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-func mailRedisKey(key string, inbox string) string {
+func mailRedisKey(inbox string, key string) string {
 	return fmt.Sprintf("httelper:mail:v1:%s:%s", inbox, key)
 }
 
@@ -69,7 +69,9 @@ func main() {
 		tee := io.TeeReader(c.Request.Body, &buf)
 
 		body, _ := ioutil.ReadAll(tee)
-		fmt.Println(string(body))
+		if string(body) == "" {
+			panic("body empty")
+		}
 
 		msg, err := cloudmailin2.Decode(&buf)
 		if err != nil {
@@ -78,8 +80,8 @@ func main() {
 
 		user := strings.Split(msg.Headers.To, "@")[0]
 		inbox := strings.Split(user, "+")[0]
+		redis.LPush(c, mailRedisKey(inbox, "queue"), msg.HTML)
 
-		redis.LPush(c, mailRedisKey("queue", inbox), msg.HTML)
 		c.String(http.StatusOK, "ok")
 	})
 
@@ -92,27 +94,27 @@ func main() {
 		user := strings.Split(c.Param("email"), "@")[0]
 		inbox := strings.Split(user, "+")[0]
 
-		redis.LPush(c, mailRedisKey("queue", inbox), string(bodyBytes))
+		redis.LPush(c, mailRedisKey(inbox, "queue"), string(bodyBytes))
 	})
 
 	r.GET("/mail/unlock/:inbox", func(c *gin.Context) {
-		redis.Set(c, mailRedisKey("status", c.Param("inbox")), "unlocked", 0)
+		redis.Set(c, mailRedisKey(c.Param("inbox"), "status"), "unlocked", 0)
 		c.String(http.StatusOK, "unlocked")
 	})
 
 	r.GET("/mail/lock/:inbox", func(c *gin.Context) {
-		redis.Set(c, mailRedisKey("status", c.Param("inbox")), "locked", 0)
+		redis.Set(c, mailRedisKey(c.Param("inbox"), "status"), "locked", 0)
 		c.String(http.StatusOK, "locked")
 	})
 
 	r.GET("/mail/status/:inbox", func(c *gin.Context) {
-		status, _ := redis.Get(c, mailRedisKey("status", c.Param("inbox"))).Result()
+		status, _ := redis.Get(c, mailRedisKey(c.Param("inbox"), "status")).Result()
 		c.String(http.StatusOK, status)
 	})
 
 	r.GET("/mail/next/:inbox", func(c *gin.Context) {
 		mode := c.DefaultQuery("mode", "peek")
-		status, _ := redis.Get(c, mailRedisKey("status", c.Param("inbox"))).Result()
+		status, _ := redis.Get(c, mailRedisKey(c.Param("inbox"), "status")).Result()
 
 		if status != "unlocked" {
 			c.String(http.StatusLocked, status)
@@ -122,9 +124,9 @@ func main() {
 		message := ""
 		switch mode {
 		case "peek":
-			message, _ = redis.LIndex(c, mailRedisKey("queue", c.Param("inbox")), 0).Result()
+			message, _ = redis.LIndex(c, mailRedisKey(c.Param("inbox"), "queue"), 0).Result()
 		case "pop":
-			message, _ = redis.RPop(c, mailRedisKey("queue", c.Param("inbox"))).Result()
+			message, _ = redis.RPop(c, mailRedisKey(c.Param("inbox"), "queue")).Result()
 		default:
 			panic("unknown mode " + mode)
 		}
