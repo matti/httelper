@@ -17,6 +17,10 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
+func mailRedisKey(key string, inbox string) string {
+	return fmt.Sprintf("httelper:mail:v1:%s:%s", inbox, key)
+}
+
 func main() {
 	redisURL, ok := os.LookupEnv("REDIS_URL")
 	if !ok {
@@ -59,7 +63,7 @@ func main() {
 		c.String(http.StatusOK, "cleared")
 	})
 
-	r.POST("/mail/cloudmailin", func(c *gin.Context) {
+	r.POST("/mail/cloudmailin/:inbox", func(c *gin.Context) {
 		var buf bytes.Buffer
 		tee := io.TeeReader(c.Request.Body, &buf)
 
@@ -70,27 +74,50 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		redis.LPush(c, "httelper:mail:v1:inbox", msg.HTML)
+		redis.LPush(c, mailRedisKey("queue", c.Param("inbox")), msg.HTML)
 		c.String(http.StatusOK, "ok")
 	})
 
-	r.POST("/mail/raw", func(c *gin.Context) {
+	r.POST("/mail/raw/:inbox", func(c *gin.Context) {
 		bodyBytes, err := ioutil.ReadAll(c.Request.Body)
 		if err != nil {
 			panic(err)
 		}
 
 		fmt.Println("body", string(bodyBytes))
-		redis.RPush(c, "httelper:mail:v1:inbox", string(bodyBytes))
+		redis.LPush(c, mailRedisKey("queue", c.Param("inbox")), string(bodyBytes))
 	})
-	r.GET("/mail/next", func(c *gin.Context) {
+
+	r.GET("/mail/unlock/:inbox", func(c *gin.Context) {
+		redis.Set(c, mailRedisKey("status", c.Param("inbox")), "unlocked", 0)
+		c.String(http.StatusOK, "unlocked")
+	})
+
+	r.GET("/mail/lock/:inbox", func(c *gin.Context) {
+		redis.Set(c, mailRedisKey("status", c.Param("inbox")), "locked", 0)
+		c.String(http.StatusOK, "locked")
+	})
+
+	r.GET("/mail/status/:inbox", func(c *gin.Context) {
+		status, _ := redis.Get(c, mailRedisKey("status", c.Param("inbox"))).Result()
+		c.String(http.StatusOK, status)
+	})
+
+	r.GET("/mail/next/:inbox", func(c *gin.Context) {
 		mode := c.DefaultQuery("mode", "peek")
+		status, _ := redis.Get(c, mailRedisKey("status", c.Param("inbox"))).Result()
+
+		if status != "unlocked" {
+			c.String(http.StatusLocked, status)
+			return
+		}
+
 		message := ""
 		switch mode {
 		case "peek":
-			message, _ = redis.LIndex(c, "httelper:mail:v1:inbox", 0).Result()
+			message, _ = redis.LIndex(c, mailRedisKey("queue", c.Param("inbox")), 0).Result()
 		case "pop":
-			message, _ = redis.LPop(c, "httelper:mail:v1:inbox").Result()
+			message, _ = redis.RPop(c, mailRedisKey("queue", c.Param("inbox"))).Result()
 		default:
 			panic("unknown mode " + mode)
 		}
