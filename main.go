@@ -76,7 +76,9 @@ func main() {
 			panic(err)
 		}
 
-		inbox := strings.Split(msg.Headers.To, "@")[0]
+		user := strings.Split(msg.Headers.To, "@")[0]
+		inbox := strings.Split(user, "+")[0]
+
 		redis.LPush(c, mailRedisKey("queue", inbox), msg.HTML)
 		c.String(http.StatusOK, "ok")
 	})
@@ -87,7 +89,8 @@ func main() {
 			panic(err)
 		}
 
-		inbox := strings.Split(c.Param("email"), "@")[0]
+		user := strings.Split(c.Param("email"), "@")[0]
+		inbox := strings.Split(user, "+")[0]
 
 		redis.LPush(c, mailRedisKey("queue", inbox), string(bodyBytes))
 	})
