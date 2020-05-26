@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -63,7 +64,7 @@ func main() {
 		c.String(http.StatusOK, "cleared")
 	})
 
-	r.POST("/mail/cloudmailin/:inbox", func(c *gin.Context) {
+	r.POST("/mail/cloudmailin", func(c *gin.Context) {
 		var buf bytes.Buffer
 		tee := io.TeeReader(c.Request.Body, &buf)
 
@@ -74,18 +75,21 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		redis.LPush(c, mailRedisKey("queue", c.Param("inbox")), msg.HTML)
+
+		inbox := strings.Split(msg.Headers.To, "@")[0]
+		redis.LPush(c, mailRedisKey("queue", inbox), msg.HTML)
 		c.String(http.StatusOK, "ok")
 	})
 
-	r.POST("/mail/raw/:inbox", func(c *gin.Context) {
+	r.POST("/mail/raw/:email", func(c *gin.Context) {
 		bodyBytes, err := ioutil.ReadAll(c.Request.Body)
 		if err != nil {
 			panic(err)
 		}
 
-		fmt.Println("body", string(bodyBytes))
-		redis.LPush(c, mailRedisKey("queue", c.Param("inbox")), string(bodyBytes))
+		inbox := strings.Split(c.Param("email"), "@")[0]
+
+		redis.LPush(c, mailRedisKey("queue", inbox), string(bodyBytes))
 	})
 
 	r.GET("/mail/unlock/:inbox", func(c *gin.Context) {
