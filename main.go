@@ -54,6 +54,13 @@ func main() {
 		}
 	})
 
+	r.GET("/sleep/:duration", func(c *gin.Context) {
+		duration, _ := time.ParseDuration(c.Param("duration"))
+		time.Sleep(duration)
+
+		c.String(http.StatusOK, "woke up")
+	})
+
 	r.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.tmpl", nil)
 	})
