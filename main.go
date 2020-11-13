@@ -65,12 +65,6 @@ func main() {
 		c.HTML(http.StatusOK, "index.tmpl", nil)
 	})
 
-	r.GET("/mail/clear", func(c *gin.Context) {
-		redis.Del(c, "httelper:mail:v1:inbox")
-
-		c.String(http.StatusOK, "cleared")
-	})
-
 	r.POST("/mail/cloudmailin", func(c *gin.Context) {
 		var buf bytes.Buffer
 		tee := io.TeeReader(c.Request.Body, &buf)
@@ -102,6 +96,11 @@ func main() {
 		inbox := strings.Split(user, "+")[0]
 
 		redis.LPush(c, mailRedisKey(inbox, "queue"), string(bodyBytes))
+	})
+
+	r.GET("/mail/clear/:inbox", func(c *gin.Context) {
+		redis.Del(c, mailRedisKey(c.Param("inbox"), "status"))
+		c.String(http.StatusOK, "unlocked")
 	})
 
 	r.GET("/mail/unlock/:inbox", func(c *gin.Context) {
