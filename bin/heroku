@@ -2,6 +2,8 @@
 set -euo pipefail
 APP=$1
 
+heroku container:login
+
 export IMAGE="registry.heroku.com/$APP/web"
 docker-compose -f docker-compose.release.yml build
 docker-compose -f docker-compose.release.yml push
