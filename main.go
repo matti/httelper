@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"httelper/cloudmailin2"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -14,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+"github.com/peterhellberg/cloudmailin"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 )
@@ -74,7 +74,7 @@ func main() {
 			panic("body empty")
 		}
 
-		msg, err := cloudmailin2.Decode(&buf)
+		msg, err := cloudmailin.Decode(&buf)
 		if err != nil {
 			panic(err)
 		}
