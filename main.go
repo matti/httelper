@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-"github.com/peterhellberg/cloudmailin"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
+	"github.com/matti/cloudmailin"
 )
 
 func mailRedisKey(inbox string, key string) string {
@@ -74,6 +74,7 @@ func main() {
 			panic("body empty")
 		}
 
+		fmt.Println(buf.String())
 		msg, err := cloudmailin.Decode(&buf)
 		if err != nil {
 			panic(err)
